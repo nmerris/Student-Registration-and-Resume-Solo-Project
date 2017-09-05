@@ -376,7 +376,7 @@ public class MainController {
             return "addskill";
         }
 
-        if(skillRepo.count() < 20) {
+        if(count < 20) {
             System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% about to save skill to Repo");
             skillRepo.save(skill);
 
