@@ -50,7 +50,8 @@
                             </thead>
 
                             <tbody>
-                                <th:block th:each="item:${currentlyRegisteredCourses}">
+                                <th:block th:each="item: ${#lists.sort(currentlyRegisteredCourses)}">
+                                <!--<th:block th:each="item:${currentlyRegisteredCourses}">-->
                                     <tr>
                                         <!-- the checked Ids are available as an array of long as a request param in the post route -->
                                         <!-- the top of the course list will have all the students currently registered courses already cheacked-->
@@ -63,7 +64,7 @@
                                 </th:block>
 
                                 <!-- now display all the other courses, do not initially check any of them -->
-                                <th:block th:each="item:${allRemainingCourses}">
+                                <th:block th:each="item: ${#lists.sort(allRemainingCourses)}">
                                     <tr>
                                         <td><input type="checkbox" name="checkedIds" th:value="${item.id}"/></td>
                                         <td><p th:text="${item.title}"></p></td>

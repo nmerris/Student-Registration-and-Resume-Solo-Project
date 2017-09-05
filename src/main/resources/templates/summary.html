@@ -91,7 +91,8 @@
                         </thead>
 
                         <tbody>
-                            <th:block th:each="item:${courses}">
+                            <th:block th:each="item:${#lists.sort(courses)}">
+                            <!--<th:block th:each="item:${courses}">-->
                                 <tr>
                                     <td><p th:text="${item.title}"></p></td>
                                     <td><p th:text="${item.instructor}"></p></td>

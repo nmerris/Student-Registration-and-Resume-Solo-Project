@@ -35,7 +35,8 @@
                             </thead>
 
                             <tbody>
-                                <th:block th:each="item:${registeredStudents}">
+                                <th:block th:each="item: ${#lists.sort(registeredStudents)}">
+                                <!--<th:block th:each="item:${registeredStudents}">-->
                                     <tr>
                                         <!-- all the students are prechecked here, because they are all registered to this course -->
                                         <td><input type="checkbox" name="checkedIds" th:value="${item.id}" checked/></td>

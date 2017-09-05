@@ -25,7 +25,8 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <th:block th:each="item:${students}">
+                                <th:block th:each="item:${#lists.sort(students)}">
+                                <!--<th:block th:each="item:${students}">-->
                                     <tr>
                                         <td><p th:text="${item.nameFirst}"></p></td>
                                         <td><p th:text="${item.nameLast}"></p></td>

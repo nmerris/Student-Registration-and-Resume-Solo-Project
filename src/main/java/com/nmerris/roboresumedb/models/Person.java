@@ -10,7 +10,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-public class Person {
+public class Person implements Comparable<Person> {
     
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -163,4 +163,10 @@ public class Person {
     public void setId(long id) {
         this.id = id;
     }
+
+    @Override
+    public int compareTo(Person other) {
+        return Long.compare(this.getId(), other.getId());
+    }
+
 }

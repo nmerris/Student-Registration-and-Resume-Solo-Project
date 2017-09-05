@@ -10,7 +10,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-public class Course {
+public class Course implements Comparable<Course> {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -104,5 +104,10 @@ public class Course {
 
     public void setNumRegistered(long numRegistered) {
         this.numRegistered = numRegistered;
+    }
+
+    @Override
+    public int compareTo(Course other) {
+        return Long.compare(this.getId(), other.getId());
     }
 }
