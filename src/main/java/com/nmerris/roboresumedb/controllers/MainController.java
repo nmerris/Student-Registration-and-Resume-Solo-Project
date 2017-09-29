@@ -56,6 +56,8 @@ public class MainController {
     }
 
 
+    // programmatically loads semi-random dummy data for 20 students
+    // registers then in randomly generated courses, assigns skills, eds, and workexps in their resumes
     @GetMapping("/loaddummydata")
     public String loadDummyData() {
 
