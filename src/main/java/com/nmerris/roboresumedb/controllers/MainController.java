@@ -59,11 +59,40 @@ public class MainController {
     @GetMapping("/loaddummydata")
     public String loadDummyData() {
 
-        // really should only allow this to happen once per session
-        if(!currPerson.isDummyDataHasBeenLoaded()) {
+        // for the purposes of this app, we are only going to allow auto data loading once
+        // each auto load creates 20 new people, so this only allows it to happen once
+        // note that the user can add as many individual people as they like
+        if(personRepo.count() < 20) {
             DummyData.load(courseRepo, personRepo, workExperienceRepo, skillRepo, educationRepo);
             currPerson.setDummyDataHasBeenLoaded(true);
         }
+
+        return "redirect:/";
+    }
+
+
+    @GetMapping("/resetall")
+    @Transactional
+    public String wipeAllTables() {
+
+        // delete all the eds, workexps, and skills
+        // no worries about associations because they only have one to many
+        educationRepo.deleteAll();
+        workExperienceRepo.deleteAll();
+        skillRepo.deleteAll();
+
+        // to delete all people and courses, first need to remove all many to many associations from both tables
+        for(Course c : courseRepo.findAll()) {
+            c.getPeople().clear();
+        }
+
+        for(Person p : personRepo.findAll()) {
+            p.getCourses().clear();
+        }
+
+        // now that there are no longer any many to many associations, ok to wipe the tables
+        courseRepo.deleteAll();
+        personRepo.deleteAll();
 
         return "redirect:/";
     }
@@ -93,8 +122,6 @@ public class MainController {
     // to get here, a user must have clicked on an existing students summary --> edit resume link, so the student must already exist
     @GetMapping("/addperson")
     public String addPersonGet(Model model) {
-        System.out.println("=============================================================== just entered /addperson GET");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
 
         // send the existing person to the form
         model.addAttribute("newPerson", personRepo.findOne(currPerson.getPersonId()));
@@ -111,8 +138,6 @@ public class MainController {
     @PostMapping("/addperson")
     public String addPersonPost(@Valid @ModelAttribute("newPerson") Person personFromForm,
                                 BindingResult bindingResult, Model model) {
-        System.out.println("=============================================================== just entered /addperson POST");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
 
         // return the same view (now with validation error messages) if there were any validation problems
         if(bindingResult.hasErrors()) {
@@ -149,8 +174,6 @@ public class MainController {
 
     @GetMapping("/addeducation")
     public String addEdGet(Model model) {
-        System.out.println("=============================================================== just entered /addeducation GET");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
 
         // get the current Person
         Person p = personRepo.findOne(currPerson.getPersonId());
@@ -173,7 +196,6 @@ public class MainController {
         // to make sure the displayed name is always up to date
         addPersonNameToModel(model);
 
-        System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% created new ea, attached currPerson to it, about to add it to model");
         // create a new ea, attach the curr person to it, and add it to model
         EducationAchievement ea = new EducationAchievement();
         ea.setMyPerson(p);
@@ -186,15 +208,12 @@ public class MainController {
     @PostMapping("/addeducation")
     public String addEdPost(@Valid @ModelAttribute("newEdAchievement") EducationAchievement educationAchievement,
                             BindingResult bindingResult, Model model) {
-        System.out.println("=============================================================== just entered /addeducation POST");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
 
         // get the current Person
         Person p = personRepo.findOne(currPerson.getPersonId());
 
         // get the current count from educationRepo for the current Person
         long count = educationRepo.countAllByMyPersonIs(p);
-        System.out.println("=========================================== repo count for currPerson is: " + count);
 
         // the persons name is show at the top of each 'add' section AND each confirmation page, so we want to add
         // it to the model no matter which view is returned
@@ -217,12 +236,10 @@ public class MainController {
         // I'm being picky here, but it is possible for the user to refresh the page, which bypasses the form submit
         // button, and so they would be able to add more than 10 items, to avoid this, just condition the db save on count
         if(count < 10) {
-            System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% about to save ea to educationRepo");
             educationRepo.save(educationAchievement);
 
             // need to get an updated edsCount after saving to repo
             count = educationRepo.countAllByMyPersonIs(p);
-            System.out.println("=========================================== repo count for currPerson is: " + count);
         }
 
         // need to get the count AFTER successfully adding to db, so it is up to date
@@ -249,8 +266,6 @@ public class MainController {
     // logic in this route is identical to /addeducation, see /addeducation GetMapping for explanatory comments
     @GetMapping("/addworkexperience")
     public String addWorkGet(Model model) {
-        System.out.println("=============================================================== just entered /addworkexperience GET");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
 
         // get the current Person
         Person p = personRepo.findOne(currPerson.getPersonId());
@@ -264,7 +279,6 @@ public class MainController {
 
         addPersonNameToModel(model);
 
-        System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% created new workExp, attached currPerson to it, about to add it to model");
         WorkExperience workExp = new WorkExperience();
         workExp.setMyPerson(p);
         model.addAttribute("newWorkExperience", workExp);
@@ -277,15 +291,12 @@ public class MainController {
     @PostMapping("/addworkexperience")
     public String addWorkPost(@Valid @ModelAttribute("newWorkExperience") WorkExperience workExperience,
                             BindingResult bindingResult, Model model) {
-        System.out.println("=============================================================== just entered /addworkexperience POST");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
 
         // get the current Person
         Person p = personRepo.findOne(currPerson.getPersonId());
 
         // get the current count from work repo for the current Person
         long count = workExperienceRepo.countAllByMyPersonIs(p);
-        System.out.println("=========================================== repo count for currPerson is: " + count);
 
         addPersonNameToModel(model);
 
@@ -300,11 +311,9 @@ public class MainController {
         }
 
         if(count < 10) {
-            System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% about to save workExp to workExpRepo");
             workExperienceRepo.save(workExperience);
 
             count = workExperienceRepo.countAllByMyPersonIs(p);
-            System.out.println("=========================================== repo count for currPerson is: " + count);
         }
 
         model.addAttribute("currentNumRecords", count);
@@ -326,8 +335,6 @@ public class MainController {
     // logic in this route is identical to /addeducation, see /addeducation GetMapping for explanatory comments
     @GetMapping("/addskill")
     public String addSkillGet(Model model) {
-        System.out.println("=============================================================== just entered /addskill GET");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
 
         // get the current Person
         Person p = personRepo.findOne(currPerson.getPersonId());
@@ -341,7 +348,6 @@ public class MainController {
 
         addPersonNameToModel(model);
 
-        System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% created new skill, attached currPerson to it, about to add it to model");
         Skill skill = new Skill();
         skill.setMyPerson(p);
         model.addAttribute("newSkill", skill);
@@ -354,15 +360,12 @@ public class MainController {
     @PostMapping("/addskill")
     public String addSkillPost(@Valid @ModelAttribute("newSkill") Skill skill,
                               BindingResult bindingResult, Model model) {
-        System.out.println("=============================================================== just entered /addskill POST");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
 
         // get the current Person
         Person p = personRepo.findOne(currPerson.getPersonId());
 
         // get the current count from work repo for the current Person
         long count = skillRepo.countAllByMyPersonIs(p);
-        System.out.println("=========================================== repo count for currPerson is: " + count);
 
         addPersonNameToModel(model);
 
@@ -377,11 +380,9 @@ public class MainController {
         }
 
         if(count < 20) {
-            System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% about to save skill to Repo");
             skillRepo.save(skill);
 
             count = skillRepo.countAllByMyPersonIs(p);
-            System.out.println("=========================================== repo count for currPerson is: " + count);
         }
 
         NavBarState pageState = getPageLinkState();
@@ -401,8 +402,6 @@ public class MainController {
     // every record (except the single personal details record) can also be deleted by clicking a link next to it
     @GetMapping("/editdetails")
     public String editDetails(Model model) {
-        System.out.println("=============================================================== just entered /editdetails GET");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
 
         // get the current Person
         Person p = personRepo.findOne(currPerson.getPersonId());
@@ -426,10 +425,6 @@ public class MainController {
     @GetMapping("/delete/{id}")
     public String delete(@PathVariable("id") long id, @RequestParam("type") String type)
     {
-        System.out.println("=============================================================== just entered /delete/{id} GET");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
-        System.out.println("=========================================== incoming path var Id: " + id);
-
         Person p = personRepo.findOne(currPerson.getPersonId());
 
         try {
@@ -484,8 +479,6 @@ public class MainController {
     @GetMapping("/update/{id}")
     public String update(@PathVariable("id") long id, @RequestParam("type") String type, Model model)
     {
-        System.out.println("=============================================================== just entered /update/{id} GET");
-        System.out.println("=========================================== currPerson.getPersonId() initially: " + currPerson.getPersonId());
 
         // set the current person ID to the incoming path variable IF type is person or student
         Person p;
@@ -504,10 +497,6 @@ public class MainController {
         addPersonNameToModel(model);
 
         NavBarState pageState = getPageLinkState();
-
-        // get the current Person
-//        Person p = personRepo.findOne(currPerson.getPersonId());
-//        Person p = personRepo.findOne(id);
 
         switch (type) {
             case "person" :
@@ -568,9 +557,6 @@ public class MainController {
 
         Person p = personRepo.findOne(currPerson.getPersonId());
 
-        // populate the empty ArrayLists in our single Person from data in other tables
-//        composePerson(p);
-
         model.addAttribute("person", p);
 
         return "finalresume";
@@ -579,7 +565,6 @@ public class MainController {
 
     @GetMapping("/studentdirectory")
     public String studentDirectory(Model model) {
-        System.out.println("=============================================================== just entered /studentdirectory GET");
 
         // add all the persons to the model
         model.addAttribute("students", personRepo.findAll());
@@ -596,7 +581,6 @@ public class MainController {
 
     @GetMapping("/courselist")
     public String courseListGet(Model model) {
-        System.out.println("=============================================================== just entered /courselist GET");
 
         // add all the persons to the model
         model.addAttribute("courses", courseRepo.findAll());
@@ -615,12 +599,6 @@ public class MainController {
     // always come through the /update/id GET route, so always set the currPerson id to zero here
     @GetMapping("/addstudent")
     public String addStudentGet(Model model) {
-        System.out.println("=============================================================== just entered /addstudent GET");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
-        System.out.println("================================== about to create new Person and send it to form");
-
-
-
         Person person = new Person();
         model.addAttribute("newPerson", person);
 
@@ -639,8 +617,6 @@ public class MainController {
     @PostMapping("/addstudent")
     public String addStudentPost(@Valid @ModelAttribute("newPerson") Person personFromForm,
                                 BindingResult bindingResult, Model model) {
-        System.out.println("=============================================================== just entered /addstudent POST");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
 
         if(bindingResult.hasErrors()) {
             model.addAttribute("highlightDirectory", false);
@@ -664,7 +640,6 @@ public class MainController {
             // and so there are no courses to keep track of, just use whatever came in from the form,
             // and update currPerson ID
             currPerson.setPersonId(personRepo.save(personFromForm).getId());
-            System.out.println("======================== JUST CREATED NEW PERSON, RESET currPerson id to: " + currPerson.getPersonId());
         }
         else {
             Person p = personRepo.findOne(currPerson.getPersonId());
@@ -681,122 +656,6 @@ public class MainController {
 
     @GetMapping("/addcourse")
     public String addCourseGet(Model model) {
-        System.out.println("=============================================================== just entered /addcourse GET");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
-
-        System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% created new course, nothing is attached to it, about to add it to model");
-
-        //        System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% created new skill, attached currPerson to it, about to add it to model");
-//        Skill skill = new Skill();
-//        skill.setMyPerson(p);
-//        model.addAttribute("newSkill", skill);
-
-
-//        // testing
-//        // create a new course with NO person attached to it
-//        // result: course saved in repo ok, join table all nulls
-//        Course c = new Course();
-//        c.setCredits(1.5f);
-//        c.setInstructor("Instructor Bob");
-//        c.setTitle("Bob's course");
-//        courseRepo.save(c);
-//
-//        // create another course
-//        Course c2 = new Course();
-//        c2.setCredits(2.5f);
-//        c2.setInstructor("Instructor Two");
-//        c2.setTitle("Course Title Two");
-//        courseRepo.save(c2);
-//
-//        // create another course
-//        Course c3 = new Course();
-//        c3.setCredits(3.5f);
-//        c3.setInstructor("Instructor Three");
-//        c3.setTitle("Course Title Three");
-//        courseRepo.save(c3);
-//
-//        // create another course
-//        Course c4 = new Course();
-//        c4.setCredits(4.5f);
-//        c4.setInstructor("Instructor Four");
-//        c4.setTitle("Course Title Four");
-//        courseRepo.save(c4);
-//
-//
-//        // create a new person with NO course attached to it
-//        // result: exactly same as above but for person
-//        Person p = new Person();
-//        p.setEmail("a@b.com");
-//        p.setNameFirst("Nate");
-//        p.setNameLast("Merris");
-//        personRepo.save(p);
-//
-//        Person p2 = new Person();
-//        p2.setEmail("x@y.com");
-//        p2.setNameLast("LastNameTwo");
-//        p2.setNameFirst("FirstNameTwo");
-//        personRepo.save(p2);
-//
-//
-//        // now attach a set of courses to the person
-//        HashSet<Course> myCourses = new HashSet<>();
-//        myCourses.add(c);
-//        myCourses.add(c2);
-//        myCourses.add(c3);
-//        p.addCourses(myCourses);
-//        personRepo.save(p);
-//
-//        // check to make sure it worked
-//        System.out.println("***************** just added a set of courses to person id: " + p.getId());
-//        System.out.println("***************** courseRepo.findAllByMyPeopleIs(p): ");
-//        for (Course anyCourse : courseRepo.findAllByPeopleIs(p)) {
-//            System.out.println("********* course id: " + anyCourse.getId() + ", title: " + anyCourse.getTitle());
-//        }
-//
-//        // remove a set of courses from the person
-//        HashSet<Course> toRemove = new HashSet<>();
-//        toRemove.add(c);
-//        toRemove.add(c2);
-//        toRemove.add(c4); // not actually attached to p, testing for check box input... !!!!!!!!!! works!!!!!!!!!!!!
-////        p.removeCourse(c);
-//        p.removeCourses(toRemove);
-//
-//        // now add another set, this simulates a user checking/unchecking numerous course boxes in student reg page
-//        HashSet<Course> toAddBack = new HashSet<>();
-//        toAddBack.add(c2);
-//        toAddBack.add(c4);
-//        p.addCourses(toAddBack);
-//
-//        personRepo.save(p);
-//
-//        // check to make sure it worked
-//        System.out.println("***************** just added, then removed, then added again courses");
-////        System.out.println("***************** just removed course id: " + c.getId());
-//        System.out.println("***************** then saved to personRepo... courseRepo.findAllByMyPeopleIs(p): ");
-//        for (Course anyCourse : courseRepo.findAllByPeopleIs(p)) {
-//            System.out.println("********* course id: " + anyCourse.getId() + ", title: " + anyCourse.getTitle());
-//        }
-//
-//
-//        // try to remove a person from a course... WORKS!!! but must remove the course from EACH PERSON before removing
-//        // the persons from the course, because database stuff
-//        HashSet<Person> personsToRemove = new HashSet<>();
-//        personsToRemove.add(p); // only removing one person, could do many
-//        for (Person somePersonsToRemoveFromOneCourse : personsToRemove) {
-//            somePersonsToRemoveFromOneCourse.removeCourse(c4);
-//        }
-//
-//        // NOW that the course in question has been removed from EVERY person you are trying to remove from the course
-//        // you can now remove the persons from the course and finally save it to repo
-//        c4.removePersons(personsToRemove);
-//        courseRepo.save(c4);
-//
-//
-//        // get all the persons who are enrolled in a given course
-//        System.out.println("******************************** persons enrolled in courseId: " + c3.getId() + ", title: " + c3.getTitle());
-//        for (Person enrolledPerson : personRepo.findAllByCoursesIs(c3)) {
-//            System.out.println("*********** personId: " + enrolledPerson.getId() + ", first name: " + enrolledPerson.getNameFirst());
-//        }
 
         Course course = new Course();
         model.addAttribute("newCourse", course);
@@ -814,9 +673,6 @@ public class MainController {
     @PostMapping("/addcourse")
     public String addCoursePost(@Valid @ModelAttribute("newCourse") Course course,
                                BindingResult bindingResult, Model model) {
-        System.out.println("=============================================================== just entered /addcourse POST");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
-
 
         if(bindingResult.hasErrors()) {
             model.addAttribute("highlightDirectory", false);
@@ -826,7 +682,6 @@ public class MainController {
             return "addcourse";
         }
 
-        System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% about to save course to Repo");
         courseRepo.save(course);
 
         // go to course listing page if successfully added a course, no need for confirmation page here
@@ -836,11 +691,9 @@ public class MainController {
 
     @GetMapping("/summary/{id}")
     public String summary(@PathVariable("id") long id, Model model) {
-        System.out.println("=============================================================== just entered /summary/{id} GET");
 
         // set the current person id to the incoming path variable, which is the id of student that was just clicked
         currPerson.setPersonId(id);
-        System.out.println("=========================================== just set currPerson.getPersonId(): " + currPerson.getPersonId());
 
         Person p = personRepo.findOne(id);
         model.addAttribute("numEds", educationRepo.countAllByMyPersonIs(p));
@@ -870,8 +723,6 @@ public class MainController {
 
     @GetMapping("/studentregistration")
     public String studentRegistrationGet(Model model) {
-        System.out.println("=============================================================== just entered /studentregistration GET");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
 
         // get the current person
         Person p = personRepo.findOne(currPerson.getPersonId());
@@ -918,19 +769,6 @@ public class MainController {
 
     @PostMapping("/studentregistration")
     public String studentRegistrationPost(@RequestParam(value = "checkedIds", required = false) long[] checkedCourseIds) {
-        System.out.println("=============================================================== just entered /studentregistration POST");
-        System.out.println("=========================================== currPerson.getPersonId(): " + currPerson.getPersonId());
-
-
-        // testing
-        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!! just got these ids from check boxes (these were the checked boxes)...");
-        try {
-            for (long id : checkedCourseIds) {
-                System.out.println(id + "  <-----");
-            }
-        } catch (Exception e) {
-            System.out.println("THERE WERE NO COURSES CHECKED, SO checkedCourseIds was NULL, that's just fine");
-        }
 
         //get the current Person
         Person p = personRepo.findOne(currPerson.getPersonId());
@@ -947,7 +785,7 @@ public class MainController {
         }
         catch (Exception e)
         {
-            System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!! NO COURSES WERE ADDED, SO STUDENT SHOULD HAVE ZERO COURSES NOW");
+//            System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!! NO COURSES WERE ADDED, SO STUDENT SHOULD HAVE ZERO COURSES NOW");
             // nothing to do here, it's okay if no courses were added to person
         }
 
@@ -962,8 +800,6 @@ public class MainController {
 
     @GetMapping("/courseregistration/{id}")
     public String courseRegistrationGet(@PathVariable("id") long id, Model model) {
-        System.out.println("=============================================================== just entered /courseregistration GET");
-        System.out.println("=========================================== courseId: " + id);
 
         // get the current being viewed
         Course c = courseRepo.findOne(id);
@@ -994,23 +830,9 @@ public class MainController {
     @PostMapping("/courseregistration/{id}")
     public String courseRegistrationPost(@PathVariable("id") long id,
                                          @RequestParam(value = "checkedIds", required = false) Long[] checkedStudentIds) {
-        System.out.println("=============================================================== just entered /courseregistration POST");
-        System.out.println("=========================================== courseId: " + id);
 
         // get the course
         Course c = courseRepo.findOne(id);
-
-
-        // testing
-        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!! just got these ids from check boxes (these were the checked boxes)...");
-        try {
-            for (long checkedId : checkedStudentIds) {
-                System.out.println(checkedId + "  <-----");
-            }
-        } catch (Exception e) {
-            System.out.println("THERE WERE NO STUDENTS CHECKED, SO checkedStudentIds was NULL, that's just fine");
-        }
-
 
         // build a set of ids to unregister from this course, start with a set of ALL the ids currently registered
         Set<Long> studentIdsToUnregister = new HashSet<>();
@@ -1085,8 +907,8 @@ public class MainController {
             state.setDisableShowFinalLink(skillRepo.countAllByMyPersonIs(p) == 0 || educationRepo.countAllByMyPersonIs(p) == 0);
         }
         else {
-            System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! p == null in getPageLinkState, so must not have found a Person in personRepo");
-            System.out.println("!!!!!!!!!!!!!!!!!!!!!! initializing navbar state with appropriate values....");
+//            System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! p == null in getPageLinkState, so must not have found a Person in personRepo");
+//            System.out.println("!!!!!!!!!!!!!!!!!!!!!! initializing navbar state with appropriate values....");
 
             // zero out the counts for the badges, because user has not entered a Person yet
             state.setNumSkills(0);
