@@ -1,7 +1,11 @@
 # Registration Resume Pro
 
-## [Experience this app live on Heroku](https://job-pro-5000.herokuapp.com/)
+## [Experience this app live on Heroku](https://registration-resume-pro.herokuapp.com/)
 username: user, password: pass   
+
+_Please note that Heroku can sometimes have an exceedingly slow response time at first, so if the welcome page doesn't load on the first try, it should on the second try.  After it 'wakes up' the pages should respond well._
+***
+
 Feel free to do whatever you want: add students or course, wipe all the tables, load dummy data, it's up to you!   
 Note: the dummy data loader will only load if there are 20 or less persons in the person table, ie it will only load once.  If you wipe all the tables, it will allow you to load more dummy data.
 
